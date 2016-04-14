@@ -114,6 +114,38 @@ def main(argv=None):
     Triangulation goes in here
     """
 
+    print "triangulation"
+
+    ii = 0
+    while ii < len(graph):
+        xx = 0
+        yy = ii
+        parents = []
+        first_branch = []
+        start = True
+        while xx < len(graph[yy]):
+            if parents.count(xx) > 0:
+                xx += 1
+            else:
+                if first_branch.count(xx) > 0:
+                    xx += 1
+                else:
+                    if graph[yy][xx] == 1:
+                        parents.append(yy)
+                        if start == True:
+                            first_branch.append(xx)
+                            start = False
+                        yy = xx
+                        xx = 0
+                        # xx = len(graph[yy])
+                    else:
+                        xx += 1
+        print first_branch
+        print parents
+        ii += 1
+
+
+
     print "Junction trees"
 
     ii = len(graph)
