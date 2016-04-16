@@ -115,7 +115,7 @@ def main(argv=None):
     """
 
     print "triangulation"
-
+    print len(graph)
     ii = 0
     while ii < len(graph):
         xx = 0
@@ -123,25 +123,48 @@ def main(argv=None):
         parents = []
         first_branch = []
         start = True
-        while xx < len(graph[yy]):
-            if parents.count(xx) > 0:
-                xx += 1
+        jj = 0
+        while xx <= len(graph[yy]):
+            # print 'loop1'
+            if xx == len(graph[yy]):
+                # print 'ifjj'
+                start = True
+                jj += 1
+
+                if jj < len(graph):
+                    # print 'iflng'
+                    yy = jj
+                    xx = 0
+                else:
+                    print first_branch
+                    xx += 1
             else:
-                if first_branch.count(xx) > 0:
+                # print 'elsejj'
+                if parents.count(xx) > 0:
+                    # print 'ifparents'
                     xx += 1
                 else:
-                    if graph[yy][xx] == 1:
-                        parents.append(yy)
-                        if start == True:
-                            first_branch.append(xx)
-                            start = False
-                        yy = xx
-                        xx = 0
-                        # xx = len(graph[yy])
-                    else:
+                    # print 'elseparents'
+                    if first_branch.count(xx) > 0:
+                        # print 'iffb'
                         xx += 1
-        print first_branch
+                    else:
+                        # print 'elsefb'
+                        if graph[yy][xx] == 1:
+                            # print 'ifgyx'
+                            parents.append(yy)
+                            if start == True:
+                                # print 'ifstart'
+                                first_branch.append(xx)
+                                start = False
+                            yy = xx
+                            xx = 0
+                            # xx = len(graph[yy])
+                        else:
+                            # print 'elsegyx'
+                            xx += 1
         print parents
+        print 'xx: ' + str(xx) + ' yy: ' + str(yy) + ' ii: ' + str(ii)
         ii += 1
 
 
