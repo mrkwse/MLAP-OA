@@ -3,6 +3,7 @@ import getopt
 import sys
 import math
 from pprint import pprint
+import string
 
 def main(argv=None):
 
@@ -47,6 +48,7 @@ def main(argv=None):
     print data_in
     parents = parenthood(graph)
     prob = calculate_p_initial(graph, parents, data_in)
+    calc_log_likelihood(prob, data_in, parents)
 
     print parents
 
@@ -97,62 +99,37 @@ def calculate_p_initial(graph, parents, data):
         prob[ii] = []
         # print prob
         # xx is the value of x (0 or 1) for p(x)
-        print ii
 
         if parents[ii] == []:
             prob_1 = calculate_simple_p(data, ii)
             prob[ii] = [(1 - prob_1), prob_1]
         else:
-            prob[ii] = [0.5, 0.5]
-            # index = len(parents[ii]) + 1
-            # pX = 1 / math.pow(2,index)
-            #
-            # # prob[ii] = [{},{}]
-            # # print prob
-            # prob[ii] = []
-            #
-            # prob_1 = 0.1
-            # xx = [0]
-            # # while xx[0] <= 1:
-            # #     current_prob = prob[ii]
-            # #     print current_prob
-            # # current_prob = current_prob[xx]
-            #     # if False:
-            # if len(parents[ii]) > 1:
-            #     jj = 0
-            #     current_prob = prob[ii]
-            #     kk = 0
-            #     xx = [0]
-            #
-            #     while xx.count(0) > 0:
-            #     # while jj < len(parents[ii]):
-            #
-            #         # print current_prob
-            #         # print 'jj' + str(jj)
-            #         if xx[jj] <= 1:
-            #             if len(xx) < len(parents[ii]):
-            #                 xx.append(0)
-            #             current_prob.append({parents[ii][jj]: []})
-            #             print 'xx ' + str(xx)
-            #             # print parents[ii]
-            #             # print current_prob
-            #             # print 'jj = ' + str(jj)
-            #             # current_prob[parents[ii][jj]] = []
-            #             print current_prob
-            #             current_prob = current_prob[xx[jj]][parents[ii][jj]]
-            #             print current_prob
-            #             if len(parents[ii]) < len(xx):
-            #                 kk += 1
-            #             xx[kk] = 1
-            #             # jj += 1
-            #             print xx
-            #         jj += 1
-            #     if xx == 0:
-            #         current_prob.append(1 - prob_1)
-            #     elif xx == 1:
-            #         current_prob.append(prob_1)
-            # # prob[ii] = [0.2, 0.2]
-            #     # xx[0] += 1
+            # prob[ii] = [0.5, 0.5]
+            prob[ii] = [{},{}]
+            p_x = 0.5
+            instance = []
+            for child in parents[ii]:
+                instance.append(child)
+
+            pp = 0
+            xx = []
+            for a in instance:
+                xx.append(0)
+
+            while pp < math.pow(2,(len(parents[ii]) + 1)):
+                p_x = 0.5
+                key = []
+                xx = return_binary_array(pp, (len(parents[ii]) + 1))
+                qq = 0
+                while qq < len(instance):
+                    key.append([instance[qq],xx[qq + 1]])
+                    if prob[instance[qq]]:
+                        p_x = p_x * prob[instance[qq]][xx[qq + 1]]
+                        qq += 1
+
+                prob[ii][xx[0]][str(key)] = p_x
+                pp += 1
+
         ii += 1
     pprint(prob)
     return prob
@@ -177,27 +154,68 @@ def calc_log_likelihood(prob, data, parents):
                 if row[ii] > -1:
                     log_sum += math.log(prob[ii][row[ii]])
                 else:
-                    log_sum += math.log(0)
+                    log_sum += math.log(prob[ii][0]+ prob[ii][1])
             else:
-                likelihood = 0.0
-                sum_likelihood = False
                 if row[ii] > -1:
-                    p_x = prob[ii][row[ii]]
-                    jj = 0
-                    while jj < len(parents[ii]):
-                        if row[parents[ii][jj]] > -1:
-                            if sum_likelihood = False:
-                                p_x = p_x *
-                                      prob[parents[ii][jj][row[parents[ii][jj]]]]
-                        else:
-                            p_x = [(p_x + prob[parents[ii][jj][0]]),
-                                   (p_x + prob[parents[ii][jj][1]])]
-                            sum_likelihood = True
+                    vals = []
+                    kkey = []
+                    for ancestor in parents[ii]:
+                        if row[ancestor] != -1:
+                            vals.append(row[ancestor])
+                            aa = 0
+                            # kkey = []
+                            # while aa < len(vals):
+                                # if parents[ii] != []:
+                            kkey.append([ancestor,vals[aa]])
+                                # aa += 1
+                    """
+                    Will fail if cell contains nan as key simply omits that
+                    cell from array of key in event of having to duplicate
+                    through. Maybe some sort of flag to continue/increment ii
+                    and/or increment through 0/1 for each ancestor that is
+                    unknown?
+                    """
+                    if kkey != []:
+                        print str(kkey)
+                        p_x = prob[ii][row[ii]][str(kkey)]
+                        log_sum += math.log(p_x)
+                    # p_x = prob[ii][row[ii]][kkey]
+                    # log_sum += math.log(p_x)
+            ii += 1
+        print log_sum
+            # else:
+            #     likelihood = 0.0
+            #     sum_likelihood = False
+            #     if row[ii] > -1:
+            #         p_x = prob[ii][row[ii]]
+            #         jj = 0
+            #         while jj < len(parents[ii]):
+            #             if row[parents[ii][jj]] > -1:
+            #                 if sum_likelihood == False:
+            #                     pass
+            #             else:
+            #                 p_x = [(p_x + prob[parents[ii][jj][0]]),
+            #                        (p_x + prob[parents[ii][jj][1]])]
+            #                 sum_likelihood = True
 
 
 
 
-
+def return_binary_array(iteration_integer, length):
+    binary_string = "{0:b}".format(iteration_integer)
+    array = list(binary_string)
+    xx = 0
+    while xx < len(array):
+        array[xx] = int(array[xx])
+        xx += 1
+    if len(array) < length:
+        xx = 0
+        prepend = []
+        while xx < (length - len(array)):
+            prepend.append(0)
+            xx += 1
+        array = prepend + array
+    return array
 
 
 
