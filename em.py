@@ -310,19 +310,26 @@ def calc_log_likelihood(prob, data, parents):
                     pp = 0
                     jj = row[ii]
                     px = 0.0
+                    # TODO
                     # pdb break here and step through to check summation of prob
-                    while pp < math.pow(2, check_arr.values().count(-1)):
-                        # key = [[]] * (len(parents[ii]) + 1)
-                        xx = return_binary_array(pp, check_arr.values().count(-1))
-                        qq = 0
-                        while qq < check_arr.values().count(-1):
-                            if missing[qq] == -1:
-                                jj = xx[qq]
-                            else:
-                                key[missing[qq]][1] = xx[qq]
-                            qq += 1
-                        pp += 1
-                        px += prob[ii][jj][str(key)]
+                    if (missing != []) and (len(missing) < len(parents[ii]) + 1):
+                        while pp < math.pow(2, check_arr.values().count(-1)):
+                            # key = [[]] * (len(parents[ii]) + 1)
+                            xx = return_binary_array(pp, check_arr.values().count(-1))
+                            qq = 0
+                            while qq < check_arr.values().count(-1):
+                                if missing[qq] == -1:
+                                    jj = xx[qq]
+                                else:
+                                    key[missing[qq]][1] = xx[qq]
+                                qq += 1
+                            pp += 1
+                            px += prob[ii][jj][str(key)]
+                    # else:
+                    #     while pp < len(parents[ii]):
+                    #         key[]
+                    elif (len(missing) < len(parents[ii]) + 1):
+                        px += prob[ii][row[ii]][str(key)]
                     if px > 0:
                         log_sum += math.log(px)
 
