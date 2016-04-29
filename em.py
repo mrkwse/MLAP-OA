@@ -55,9 +55,31 @@ def main(argv=None):
     # print graph
     # print "log-likelihood is currently: " + str(log_like)
 
-    prob = calculate_p_array(prob, parents, data_in)
-    log_like = calc_log_likelihood(prob, data_in, parents)
+    cpt = calculate_p_array(prob, parents, data_in)
+
+    prob = calculate_m_p(prob, parents, data_in)
+
+    pprint(cpt)
+    pprint(prob)
+    log_like = calc_log_likelihood(cpt, data_in, parents)
     print "log-likelihood is currently: " + str(log_like)
+
+    cpt = calculate_p_array(prob, parents, data_in)
+
+    # pprint(prob)
+    # pprint(cpt)
+    log_like = calc_log_likelihood(cpt, data_in, parents)
+    print "log-likelihood is currently: " + str(log_like)
+
+    ii = 0
+    while ii < 5:
+        prob = calculate_m_p(prob, parents, data_in)
+        cpt = calculate_p_array(prob, parents, data_in)
+
+        log_like = calc_log_likelihood(cpt, data_in, parents)
+        print "log-likelihood is currently: " + str(log_like)
+
+        ii += 1
 
 def parenthood(network):
     offspring = []
@@ -153,36 +175,9 @@ def calculate_consequent_p(data, column, prob):
             count_0 += 1
         else:
             count_un += 1
-    p1 = (float(count_1) + (count_un * prob[column][1])) / len(data)
-    p0 = (float(count_0) + (count_un * prob[column][0])) / len(data)
+    p1 = (float(count_1) + (count_un * prob[column][1])) / float(len(data))
+    p0 = (float(count_0) + (count_un * prob[column][0])) / float(len(data))
     return [p0, p1]
-
-def calc_complex_ps(data, columns, prob):
-    ii = 0
-    xx = 0
-    check_arr = {}
-
-    for row in data:
-        for element in columns:
-            check_arr[element[0]] = 0
-        for element in columns:
-            if row[element[0]] == -1:
-                check_arr[element[0]] = -1
-            elif row[element[0]] == element[1]:
-                check_arr[element[0]] = 1
-
-        if check_arr.values().count(0) == 0:
-            if check_arr.values().count(-1) == 0:
-                xx += 1
-            else:
-                pp = 1.0
-                jj = 0
-                for element in columns:
-                    if check_arr[element[0]] == -1:
-                        pp = pp * prob[element[0]][element[1]]
-                xx += pp
-                print xx
-    return xx / len(data)
 
 def calculate_init_array(prob, parents, data):
     ii = 0
@@ -214,23 +209,93 @@ def calculate_init_array(prob, parents, data):
                 # p_arr[:0] = ch
                 prob[ii][xx[0]][str(key)] = 0.5
             # pprint(prob)
-            print instance
+            # print instance
         ii += 1
     pprint(prob)
     return prob
 
+def calc_complex_ps(data, columns, prob):
+    ii = 0
+    cumulative = 0.0
+    check_arr = {}
+
+    for row in data:
+        inc = 1.0
+        # if (row[columns[0][0]] == columns[0][1]) or (row[columns[0][0]] == -1):
+        ii += 1
+        for element in columns:
+            check_arr[element[0]] = 0
+
+        for element in columns:
+            if row[element[0]] == -1:
+                check_arr[element[0]] = -1
+            elif row[element[0]] == element[1]:
+                check_arr[element[0]] = 1
+            else:
+                inc = 0.0
+
+        if check_arr.values().count(0) == 0:
+            if check_arr.values().count(-1) != 0:
+                for element in columns:
+                    if check_arr[element[0]] == -1:
+                        inc = inc * prob[element[0]][element[1]]
+            # if check_arr.values().count(-1) == len(columns):
+            #     inc = 0.0
+
+        cumulative += inc
+
+    # for row in data:
+    #     if row[columns[0][0]] == columns[0][1]:
+    #         ii += 1
+
+        # if inc != 0:
+        #     ii += 1
+                # print xx
+    # print columns
+    # print cumulative
+    # print ii
+
+    joint = cumulative / len(data)
+
+    cumulative = 0.0
+
+    for row in data:
+        inc = 1.0
+        jj = 1
+        while jj < len(columns):
+            if (row[columns[jj][0]] != columns[jj][1]) and (row[columns[jj][0]] != -1):
+                inc = 0.0
+            elif row[columns[jj][0]] == -1:
+                inc = inc * prob[columns[jj][0]][columns[jj][1]]
+            jj += 1
+        cumulative += inc
+
+
+
+    parental_joint = cumulative / len(data)
+
+    if ii > 0:
+        # print "For " + str(columns) + " count is " + str(cumulative) + " total is " + str(ii)
+        return joint / parental_joint
+    else:
+        return 0.0
+
 def calculate_p_array(prob, parents, data):
     ii = 0
-    pre_prob = copy.deepcopy(prob)
+
+    # for column in data[0]:
+    #     # if parents[ii] == []:
+    #         # pass
+    #     prob[ii] = calculate_consequent_p(data, ii, prob)
+    #     ii += 1
+
+
+    p_array = copy.deepcopy(prob)
+
+    ii = 0
     for column in data[0]:
-        if parents[ii] == []:
-            prob[ii] = calculate_consequent_p(data, ii, prob)
-        else:
-            # xx = 0
-            # while xx < 2:
-            #     p0 = 0.0
-            #     p1 = 0.0
-            prob[ii] = [{}, {}]
+        if parents[ii] != []:
+            p_array[ii] = [{}, {}]
             instance = []
             for child in parents[ii]:
                 instance.append(child)
@@ -242,26 +307,27 @@ def calculate_p_array(prob, parents, data):
                 xx.append(0)
 
             px = 0
-            while pp < math.pow(2, (len(parents[ii]) + 1)):
+            while pp < math.pow(2, (len(parents[ii]))):
                 key = []
-                xx = return_binary_array(pp, (len(parents[ii]) + 1))
+                xx = return_binary_array(pp, (len(parents[ii])))
                 qq = 0
                 while qq < len(instance):
-                    key.append([instance[qq], xx[qq+1]])
+                    key.append([instance[qq], xx[qq]])
                     qq += 1
                 pp += 1
-                ch = [[ii, xx[0]]]
+                ch = [[ii, 0]]
                 p_arr = copy.deepcopy(key)
                 p_arr[:0] = ch
                 # px += calc_complex_ps(data, p_arr, pre_prob)
-                prob[ii][xx[0]][str(key)] = calc_complex_ps(data, p_arr, pre_prob)
+                p_array[ii][0][str(key)] = calc_complex_ps(data, p_arr, prob)
+                p_array[ii][1][str(key)] = 1 - p_array[ii][0][str(key)]
             # prob[ii] = [px, (1-px)]
-            pprint(prob)
-            print instance
+            # pprint(prob)
+            # print instance
 
         ii += 1
 
-    return prob
+    return p_array
 
             # prob[ii][xx]
 
@@ -271,6 +337,7 @@ def calc_log_likelihood(prob, data, parents):
     for row in data:
         ii = 0
         while ii < len(row):
+            px = 0.0
             if parents[ii] == []:
                 if row[ii] > -1:
                     if (prob[ii][row[ii]]) > 0:
@@ -291,9 +358,11 @@ def calc_log_likelihood(prob, data, parents):
                     key = []
                     for element in parents[ii]:
                         key.append([element, row[element]])
-                    px = prob[ii][row[ii]][str(key)]
-                    if px > 0:
-                        math.log(px)
+                    px1 = prob[ii][row[ii]][str(key)]
+                    if px1 > px:
+                        px = px1
+                    # if px > 0:
+                    #     log_sum += math.log(px)
                 else:
                     key = []
                     mm = 0
@@ -314,7 +383,6 @@ def calc_log_likelihood(prob, data, parents):
                     # pdb break here and step through to check summation of prob
                     if (missing != []) and (len(missing) < len(parents[ii]) + 1):
                         while pp < math.pow(2, check_arr.values().count(-1)):
-                            # key = [[]] * (len(parents[ii]) + 1)
                             xx = return_binary_array(pp, check_arr.values().count(-1))
                             qq = 0
                             while qq < check_arr.values().count(-1):
@@ -324,14 +392,19 @@ def calc_log_likelihood(prob, data, parents):
                                     key[missing[qq]][1] = xx[qq]
                                 qq += 1
                             pp += 1
-                            px += prob[ii][jj][str(key)]
+                            px1 = prob[ii][jj][str(key)]
+                            if px1 > px:
+                                px = px1
                     # else:
                     #     while pp < len(parents[ii]):
                     #         key[]
                     elif (len(missing) < len(parents[ii]) + 1):
-                        px += prob[ii][row[ii]][str(key)]
-                    if px > 0:
-                        log_sum += math.log(px)
+                        px1 = prob[ii][row[ii]][str(key)]
+                        if px1 > px:
+                            px = px1
+
+                if px > 0:
+                    log_sum += math.log(px)
 
 
                 # else:
@@ -345,6 +418,15 @@ def calc_log_likelihood(prob, data, parents):
     return log_sum
     # print "uncondtitional is currently: " + str(uncondtitional)
 
+def calculate_m_p(prob, parents, data_in):
+    ii = 0
+    for column in data_in[0]:
+    #     # if parents[ii] == []:
+    #         # pass
+        prob[ii] = calculate_consequent_p(data_in, ii, prob)
+        ii += 1
+
+    return prob
 
 
 def return_binary_array(iteration_integer, length):
