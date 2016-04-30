@@ -57,7 +57,7 @@ def main(argv=None):
 
     cpt = calculate_p_array(prob, parents, data_in)
 
-    prob = calculate_m_p(prob, parents, data_in)
+    prob = calculate_m_p(prob, parents, data_in, cpt)
 
     pprint(cpt)
     pprint(prob)
@@ -73,7 +73,7 @@ def main(argv=None):
 
     ii = 0
     while ii < 5:
-        prob = calculate_m_p(prob, parents, data_in)
+        prob = calculate_m_p(prob, parents, data_in, cpt)
         cpt = calculate_p_array(prob, parents, data_in)
 
         log_like = calc_log_likelihood(cpt, data_in, parents)
@@ -163,7 +163,7 @@ def calculate_simple_p(training_data, column):
     # return (float(count_1) / (count_1 + count_0))
     return 0.5
 
-def calculate_consequent_p(data, column, prob):
+def calculate_consequent_p(data, column, prob, parents, cpt):
     count_1 = 0
     count_0 = 0
     count_un = 0
@@ -174,9 +174,57 @@ def calculate_consequent_p(data, column, prob):
         elif row[column] == 0:
             count_0 += 1
         else:
-            count_un += 1
-    p1 = (float(count_1) + (count_un * prob[column][1])) / float(len(data))
-    p0 = (float(count_0) + (count_un * prob[column][0])) / float(len(data))
+            if parents[column] == []:
+                count_un += 1
+            else:
+                key = []
+                ii = 0
+                missing = []
+                m_index = []
+                for ancestor in parents[column]:
+                    if row[ancestor] > -1:
+                        key.append([ancestor, row[ancestor]])
+                    else:
+                        key.append([ancestor, []])
+                        missing.append(ancestor)
+                        m_index.append(ii)
+                    ii += 1
+                pp = 0
+                yy = 0
+
+
+                """
+                Sum the products of probabilities from cpt
+                """
+                if (missing != []) and (len(missing) < len(parents)):
+                    px = [1.0, 1.0]
+                    while pp < math.pow(2, len(missing)):
+                        xx = return_binary_array(pp, len(missing))
+                        kk = 0
+                        while kk < len(missing):
+                            key[m_index[kk]][1] = xx[kk]
+                            px[0] = px[0] * prob[m_index[kk]][xx[kk]]
+                            px[1] = px[1] * prob[m_index[kk]][xx[kk]]
+                            kk += 1
+                        pp += 1
+                        px[1] = px[1] * cpt[column][1][str(key)] * prob[column][1]
+                        px[0] = px[0] * cpt[column][0][str(key)] * prob[column][0]
+                    count_1 += px[1]
+                    count_0 += px[0]
+
+                # while pp < math.pow(2, len(unknown)):
+                #     key = []
+                #     xx = return_binary_array(pp, len(unknown))
+                #     qq = 0
+                #
+                #     while qq < 2:
+                #         px[qq] = prob[column][qq][str(key)]
+
+
+    p1 = (float(count_1) / float(len(data)))
+    p0 = (float(count_0) / float(len(data)))
+    # p1 = (float(count_1) + (count_un * prob[column][1])) / float(len(data))
+    # p0 = (float(count_0) + (count_un * prob[column][0])) / float(len(data))
     return [p0, p1]
 
 def calculate_init_array(prob, parents, data):
@@ -418,12 +466,13 @@ def calc_log_likelihood(prob, data, parents):
     return log_sum
     # print "uncondtitional is currently: " + str(uncondtitional)
 
-def calculate_m_p(prob, parents, data_in):
+def calculate_m_p(prob, parents, data_in, cpt):
+    old_prob = copy.deepcopy(prob)
     ii = 0
     for column in data_in[0]:
     #     # if parents[ii] == []:
     #         # pass
-        prob[ii] = calculate_consequent_p(data_in, ii, prob)
+        prob[ii] = calculate_consequent_p(data_in, ii, old_prob, parents, cpt)
         ii += 1
 
     return prob
