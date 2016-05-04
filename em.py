@@ -51,41 +51,44 @@ def main(argv=None):
     parents = parenthood(graph)
     conditional_data = copy.deepcopy(data_in)
     prob = calculate_p_initial(graph, parents, data_in)
+    steps = 0
 
 
     # cpt = calculate_p_array(prob, parents, data_in)
     # pprint(cpt)
 
     conditional_data = e_step(prob, conditional_data, data_in, parents)
-    pprint(conditional_data)
-    # cpt = calculate_p_array(prob, parents, data_in)
+    cpt = m_step(conditional_data, parents, data_in)
+    steps += 1
+
+    log_like = calc_log_likelihood(cpt, data_in, parents)
+    print "log-likelihood is currently: " + str(log_like)
+
+    conditional_data = e_step(cpt, conditional_data, data_in, parents)
+    # pprint(conditional_data)
+    cpt = m_step(conditional_data, parents, data_in)
     # pprint(cpt)
-    cpt = m_step(conditional_data, parents, data_in)
-    pprint(cpt)
     conditional_data = e_step(cpt, conditional_data, data_in, parents)
-    pprint(conditional_data)
-    cpt = m_step(conditional_data, parents, data_in)
-    pprint(cpt)
-    conditional_data = e_step(cpt, conditional_data, data_in, parents)
-    pprint(conditional_data)
+    # pprint(conditional_data)
 
     # print "log-likelihood is currently: " + str(log_like)
 
-    ii = 0
-    while ii < 85:
-        # cpt = calculate_p_array(cpt, parents, data_in)
-        # conditional_data = e_step(cpt, conditional_data, data_in, parents)
-        # cpt = m_step(conditional_data, parents, data_in)
-        # #
-        # #
-        # log_like = calc_log_likelihood(cpt, data_in, parents)
-        # print "log-likelihood is currently: " + str(log_like)
+    delta = 10.0
+    while delta > 0.0001:
+        log_like_previous = log_like
+        conditional_data = e_step(cpt, conditional_data, data_in, parents)
+        cpt = m_step(conditional_data, parents, data_in)
+        #
+        #
+        log_like = calc_log_likelihood(cpt, data_in, parents)
+        print "log-likelihood is currently: " + str(log_like)
 
-        ii += 1
-    # pprint(cpt)
-    # pprint(conditional_data)
+        delta = log_like - log_like_previous
 
-    # pprint(cpt)
+        steps += 1
+
+    print "Convergence in " + str(steps) + " steps"
+
 
 def parenthood(network):
     offspring = []
@@ -197,9 +200,8 @@ def calc_log_likelihood(prob, data, parents):
                     pp = 0
                     jj = row[ii]
                     px = 0.0
-                    # TODO
-                    # pdb break here and step through to check summation of prob
-                    if (missing != []) and (len(missing) < len(parents[ii]) + 1):
+
+                    if (missing != []):
                         while pp < math.pow(2, check_arr.values().count(-1)):
                             xx = return_binary_array(pp, check_arr.values().count(-1))
                             qq = 0
@@ -211,15 +213,11 @@ def calc_log_likelihood(prob, data, parents):
                                 qq += 1
                             pp += 1
                             px1 = prob[ii][jj][str(key)]
-                            if px1 > px:
+                            if px1 < px:
                                 px = px1
-                    # else:
-                    #     while pp < len(parents[ii]):
-                    #         key[]
-                    elif (len(missing) < len(parents[ii]) + 1):
-                        px1 = prob[ii][row[ii]][str(key)]
-                        if px1 > px:
-                            px = px1
+                    else:
+                        px1 = prob[ii][jj][str(key)]
+                        px = px1
 
                 if px > 0:
                     log_sum += math.log(px)
@@ -272,10 +270,7 @@ def e_step(cpt, conditional_data, data_in, parents):
         for element in unknown_elements:
 
             # Initialize (figuratively) arrays (& dicts) to store probabilities
-            if parents[ii] == []:
-                conditional_data[yy][unknown_elements[ii]] = [0.0, 0.0]
-            else:
-                conditional_data[yy][unknown_elements[ii]] = [{}, {}]
+            conditional_data[yy][unknown_elements[ii]] = [0.0, 0.0]
 
             # Variables to track the sums of the likelihood of either case
             # (0 or 1) across all possible permuatations of the missing
@@ -307,7 +302,7 @@ def e_step(cpt, conditional_data, data_in, parents):
                 # Iterate through each element
                 for value in row:
 
-                    # Check if current element is uncondtitional
+                    # Check if current element is unconditional
                     if parents[xx] == []:
 
                         # If current unconditional element is unknown, use
@@ -335,23 +330,27 @@ def e_step(cpt, conditional_data, data_in, parents):
                             for ancestor in parents[xx]:
                                 key.append([ancestor, row[ancestor]])
                             # If actual element unknown, lookup index of cpt
-                            # from
+                            # from current permutation, otherwise use actual value
                             if value == -1:
                                 product = product * cpt[xx][xval[unknown_elements.index(xx)]][str(key)]
                             else:
                                 product = product * cpt[xx][value][str(key)]
                         else:
+                            # Populate key with real or permutation value
                             for ancestor in parents[xx]:
                                 if row[ancestor] != -1:
                                     key.append([ancestor, row[ancestor]])
                                 else:
                                     key.append([ancestor, xval[unknown_elements.index(ancestor)]])
+                            # Calculate product according to key and real/permulation
+                            # probability in cpt
                             if value == -1:
                                 product = product * cpt[xx][xval[unknown_elements.index(xx)]][str(key)]
                             else:
                                 product = product * cpt[xx][value][str(key)]
                     xx += 1
 
+                # Add the product to the relevant sum
                 if row[element] == 0:
                     sum_prod_0 += product
                 elif row[element] == 1:
@@ -366,7 +365,9 @@ def e_step(cpt, conditional_data, data_in, parents):
 
                 aa += 1
 
-
+            # Return conditional data (BN) according to current value, with
+            # conditional value calculated as sum of product for that value
+            # over total sum of products
             conditional_data[yy][unknown_elements[ii]][0] = sum_prod_0 / sum_prod_sum
             conditional_data[yy][unknown_elements[ii]][1] = sum_prod_1 / sum_prod_sum
 
@@ -521,68 +522,22 @@ def m_step(conditional_data, parents, data_in):
                                 count_0 += conditional_data[jj][ii][0][str(key)] * inc
                                 count_1 += conditional_data[jj][ii][1][str(key)] * inc
                                 count_ancestral += inc
-                                # count_ancestral += 1
                             else:
                                 count_0 += conditional_data[jj][ii][0] * inc
                                 count_1 += conditional_data[jj][ii][1] * inc
                                 count_ancestral += inc
-                                # count_ancestral += 1
-
-
-
 
                     jj += 1
+
+                # Calculate cpt from count of corresponding value over total
+                # occurances of ancestor
                 cpt[ii][0][str(key)] = count_0 / count_ancestral
                 cpt[ii][1][str(key)] = count_1 / count_ancestral
                 p_in += 1
 
 
-
-            if False:
-                # kk = 0
-                unknown = return_unknown_parents(conditional_data[jj], parents[ii])
-                key = []
-                mm = 0
-                missing = []
-                for ancestor in parents[ii]:
-                    if unknown.count(ancestor) == 0:
-                            key.append([ancestor, conditional_data[jj][ancestor]])
-                    else:
-                        key.append([ancestor, []])
-                        missing.append(mm)
-                    mm += 1
-                if (missing != []) and (len(missing) <= len(parents[ii])):
-                    pp = 0
-                    while pp < math.pow(2, len(unknown)):
-                        xval = return_binary_array(pp, len(unknown))
-                        qq = 0
-                        while qq < len(unknown):
-                            key[missing[qq]][1] = xval[qq]
-                            qq += 1
-
-                        for row in conditional_data:
-                            pass
-                        count_0 += conditional_data[jj][ii][0][str(key)]
-                        count_1 += conditional_data[jj][ii][1][str(key)]
-                        pp += 1
-                else:
-                    if conditional_data[jj][ii] == 0:
-                        count_0 += 1
-                        count_ancestral += 1
-                        # count_ancestral += conditional_data[jj][]x
-                    elif conditional_data[jj][ii] == 1:
-                        count_1 += 1
-                        count_ancestral += 1
-                    else:
-                        count_0 += conditional_data[jj][ii][0][str(key)]
-                        count_1 += conditional_data[jj][ii][1][str(key)]
-                jj += 1
-
-        # Simple case for unconditional hidden variables
-        # count (0/1) divided by total count of values
         ii += 1
-        # print str(ii) + ": 0 is " + str(count_0) + ", 1 is " + str(count_1)
-    # pprint(cpt)
+
     return cpt
 
 
