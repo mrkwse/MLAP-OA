@@ -71,8 +71,6 @@ def main(argv=None):
     conditional_data = e_step(cpt, conditional_data, data_in, parents)
     # pprint(conditional_data)
 
-    # print "log-likelihood is currently: " + str(log_like)
-
     delta = 10.0
     while delta > 0.0001:
         log_like_previous = log_like
@@ -87,8 +85,10 @@ def main(argv=None):
 
         steps += 1
 
+    print ""
     print "Convergence in " + str(steps) + " steps"
 
+    print_var(cpt, parents)
 
 def parenthood(network):
     offspring = []
@@ -548,6 +548,47 @@ def return_unknown_parents(row, ancestors):
             unknown_parents.append(ancestor)
 
     return unknown_parents
+
+def print_var(cpt, parents):
+    ii = 0
+    childval = 1
+    for key in cpt.keys():
+        parental_str = "("
+
+        for ancestor in parents[key]:
+            parental_str += str(ancestor) + ', '
+        if parental_str != "(":
+            parental_str = parental_str[:-2]
+        parental_str += ")"
+        print "Variable " + str(key) + " has these parents " + parental_str
+
+        pp = 0
+
+        while pp < math.pow(2, len(parents[ii])):
+            xx = return_binary_array(pp, len(parents[ii]))
+
+            key_parent = []
+            qq = 0
+            while qq < len(parents[ii]):
+                key_parent.append([parents[ii][qq], xx[qq]])
+                qq += 1
+
+            exes = ""
+            px = 0
+            if key_parent != []:
+                for x_in in xx:
+                    exes += "'" +  str(x_in) + "', "
+                if exes != "":
+                    exes = exes[:-2]
+
+                px = cpt[key][1][str(key_parent)]
+            else:
+                px = cpt[key][1]
+            print "P(" + str(key) + "=" + str(childval) + "|(" + exes + ")) = " + str(px)
+            pp += 1
+
+        print ""
+        ii += 1
 
 if __name__ == "__main__":
     main()
