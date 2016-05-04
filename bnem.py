@@ -47,15 +47,10 @@ def main(argv=None):
     except Exception as e:
         raise
 
-    # print data_in
     parents = parenthood(graph)
     conditional_data = copy.deepcopy(data_in)
     prob = calculate_p_initial(graph, parents, data_in)
     steps = 0
-
-
-    # cpt = calculate_p_array(prob, parents, data_in)
-    # pprint(cpt)
 
     conditional_data = e_step(prob, conditional_data, data_in, parents)
     cpt = m_step(conditional_data, parents, data_in)
@@ -65,19 +60,16 @@ def main(argv=None):
     print "log-likelihood is currently: " + str(log_like)
 
     conditional_data = e_step(cpt, conditional_data, data_in, parents)
-    # pprint(conditional_data)
     cpt = m_step(conditional_data, parents, data_in)
-    # pprint(cpt)
     conditional_data = e_step(cpt, conditional_data, data_in, parents)
-    # pprint(conditional_data)
 
     delta = 10.0
     while delta > 0.0001:
         log_like_previous = log_like
         conditional_data = e_step(cpt, conditional_data, data_in, parents)
         cpt = m_step(conditional_data, parents, data_in)
-        #
-        #
+        
+
         log_like = calc_log_likelihood(cpt, data_in, parents)
         print "log-likelihood is currently: " + str(log_like)
 
